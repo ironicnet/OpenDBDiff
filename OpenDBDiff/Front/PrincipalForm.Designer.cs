@@ -312,8 +312,6 @@ namespace OpenDBDiff.Front
             // 
             this.schemaTreeView1.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left)));
-            this.schemaTreeView1.DatabaseDestination = null;
-            this.schemaTreeView1.DatabaseSource = null;
             this.schemaTreeView1.Location = new System.Drawing.Point(7, 10);
             this.schemaTreeView1.Name = "schemaTreeView1";
             this.schemaTreeView1.ShowChangedItems = true;
@@ -322,6 +320,8 @@ namespace OpenDBDiff.Front
             this.schemaTreeView1.ShowUnchangedItems = true;
             this.schemaTreeView1.Size = new System.Drawing.Size(322, 429);
             this.schemaTreeView1.TabIndex = 0;
+            this.schemaTreeView1.OnSelectItem += new SchemaTreeView.SchemaHandler(schemaTreeView1_OnSelectItem);
+            this.schemaTreeView1.OnFiltersChanged += SchemaTreeView1_OnFiltersChanged;
             // 
             // tabPage1
             //

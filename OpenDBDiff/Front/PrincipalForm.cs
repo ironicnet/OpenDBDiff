@@ -32,8 +32,9 @@ namespace OpenDBDiff.Front
         OpenDBDiff.Front.IProjectHandler ProjectSelectorHandler;
 
 
-        IDatabase selectedOrigin;
-        IDatabase selectedDestination;
+        IDatabase CurrentSource;
+        IDatabase CurrentDestination;
+        IDatabase CurrentComparision;
 
         public PrincipalForm()
         {
@@ -63,21 +64,20 @@ namespace OpenDBDiff.Front
                         throw new SchemaException(progress.Error.Message, progress.Error);
                     }
 
-                    selectedOrigin = progress.Source;
-                    selectedDestination = progress.Destination;
+                    CurrentSource = progress.Source;
+                    CurrentDestination = progress.Destination;
+                    CurrentComparision = progress.Comparision;
 
                     txtSyncScript.ConfigurationManager.Language = this.ProjectSelectorHandler.GetScriptLanguage();
                     txtSyncScript.IsReadOnly = false;
                     txtSyncScript.Styles.LineNumber.BackColor = Color.White;
                     txtSyncScript.Styles.LineNumber.IsVisible = false;
                     errorLocation = "Generating Synchronized Script";
-                    txtSyncScript.Text = selectedDestination.ToSqlDiff(this._selectedSchemas).ToSQL();
+                    txtSyncScript.Text = CurrentComparision.ToSqlDiff(this._selectedSchemas).ToSQL();
                     txtSyncScript.IsReadOnly = true;
-                    schemaTreeView1.DatabaseSource = selectedDestination;
-                    schemaTreeView1.DatabaseDestination = selectedOrigin;
-                    schemaTreeView1.OnSelectItem += new SchemaTreeView.SchemaHandler(schemaTreeView1_OnSelectItem);
+                    schemaTreeView1.RebuildSchemaTree(CurrentComparision);
                     schemaTreeView1_OnSelectItem(schemaTreeView1.SelectedNode);
-                    textBox1.Text = selectedOrigin.ActionMessage.Message;
+                    textBox1.Text = CurrentDestination.ActionMessage.Message;
 
                     btnCopy.Enabled = true;
                     btnSaveAs.Enabled = true;
@@ -98,6 +98,11 @@ namespace OpenDBDiff.Front
             }
         }
 
+
+        private void SchemaTreeView1_OnFiltersChanged()
+        {
+            schemaTreeView1.RebuildSchemaTree(CurrentComparision);
+        }
         private void schemaTreeView1_OnSelectItem(string ObjectFullName)
         {
             if (ObjectFullName == null) return;
@@ -107,13 +112,15 @@ namespace OpenDBDiff.Front
             txtNewObject.Text = "";
             txtOldObject.Text = "";
 
-            IDatabase database = (IDatabase)schemaTreeView1.DatabaseSource;
-            if (database.Find(ObjectFullName) != null)
+            var newObject = CurrentSource.Find(ObjectFullName);
+            var oldObject = CurrentDestination.Find(ObjectFullName);
+
+            if (newObject != null)
             {
-                if (database.Find(ObjectFullName).Status != Enums.ObjectStatusType.DropStatus)
+                if (newObject.Status != Enums.ObjectStatusType.DropStatus)
                 {
-                    txtNewObject.Text = database.Find(ObjectFullName).ToSql();
-                    if (database.Find(ObjectFullName).Status == Enums.ObjectStatusType.OriginalStatus)
+                    txtNewObject.Text = newObject.ToSql();
+                    if (newObject.Status == Enums.ObjectStatusType.OriginalStatus)
                     {
                         btnUpdate.Enabled = false;
                     }
@@ -121,7 +128,7 @@ namespace OpenDBDiff.Front
                     {
                         btnUpdate.Enabled = true;
                     }
-                    if (database.Find(ObjectFullName).ObjectType == Enums.ObjectType.Table)
+                    if (newObject.ObjectType == Enums.ObjectType.Table)
                     {
                         btnCompareTableData.Enabled = true;
                     }
@@ -131,12 +138,11 @@ namespace OpenDBDiff.Front
                     }
                 }
             }
-
-            database = (IDatabase)schemaTreeView1.DatabaseDestination;
-            if (database.Find(ObjectFullName) != null)
+            
+            if (oldObject != null)
             {
-                if (database.Find(ObjectFullName).Status != Enums.ObjectStatusType.CreateStatus)
-                    txtOldObject.Text = database.Find(ObjectFullName).ToSql();
+                if (oldObject.Status != Enums.ObjectStatusType.CreateStatus)
+                    txtOldObject.Text = oldObject.ToSql();
             }
             txtNewObject.IsReadOnly = true;
             txtOldObject.IsReadOnly = true;
@@ -203,12 +209,11 @@ namespace OpenDBDiff.Front
                 return;
             }
 
-            var db = schemaTreeView1.DatabaseSource as IDatabase;
-            if (db != null)
+            if (CurrentComparision != null)
             {
                 this._selectedSchemas = this.schemaTreeView1.GetCheckedSchemas();
                 this.txtSyncScript.IsReadOnly = false;
-                this.txtSyncScript.Text = db.ToSqlDiff(this._selectedSchemas).ToSQL();
+                this.txtSyncScript.Text = CurrentComparision.ToSqlDiff(this._selectedSchemas).ToSQL();
                 this.txtSyncScript.IsReadOnly = false;
             }
         }
@@ -313,13 +318,12 @@ namespace OpenDBDiff.Front
                 saveFileDialog1.ShowDialog(this);
                 if (!String.IsNullOrEmpty(saveFileDialog1.FileName))
                 {
-                    var db = schemaTreeView1.DatabaseSource as IDatabase;
-                    if (db != null)
+                    if (CurrentComparision != null)
                     {
                         using (StreamWriter writer = new StreamWriter(saveFileDialog1.FileName, false))
                         {
                             this._selectedSchemas = this.schemaTreeView1.GetCheckedSchemas();
-                            writer.Write(db.ToSqlDiff(this._selectedSchemas).ToSQL());
+                            writer.Write(CurrentComparision.ToSqlDiff(this._selectedSchemas).ToSQL());
                             writer.Close();
                         }
                     }
@@ -363,10 +367,8 @@ namespace OpenDBDiff.Front
                         {
                             //ISchemaBase selected = (ISchemaBase)tree.SelectedNode.Tag;
                             ISchemaBase selected = (ISchemaBase)subnode.Tag;
-
-                            IDatabase database = (IDatabase)schemaTreeView1.DatabaseSource;
-
-                            if (database.Find(selected.FullName) != null)
+                            
+                            if (CurrentComparision.Find(selected.FullName) != null)
                             {
                                 switch (selected.ObjectType)
                                 {

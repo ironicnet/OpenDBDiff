@@ -33,6 +33,7 @@ namespace OpenDBDiff.Front
         public Schema.Model.IDatabase Source { get; private set; }
 
         public Schema.Model.IDatabase Destination { get; private set; }
+        public Schema.Model.IDatabase Comparision { get; private set; }
 
         public string ErrorLocation { get; private set; }
 
@@ -68,9 +69,10 @@ namespace OpenDBDiff.Front
                     Destination = DestinationGenerator.Process();
 
                     origenClone = (Schema.Model.IDatabase)Source.Clone(null);
+                    Comparision = (Schema.Model.IDatabase)Destination.Clone(null);
 
                     this.ErrorLocation = "Comparing Databases";
-                    Destination = Comparer.Compare(Source, Destination);
+                    Comparision = Comparer.Compare(Source, Comparision);
                     Source = origenClone;
 
                     destinationProgressControl.Message = "Complete";

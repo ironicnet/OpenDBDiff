@@ -13,31 +13,17 @@ namespace OpenDBDiff.Front
 {
     public partial class SchemaTreeView : UserControl
     {
-        private ISchemaBase databaseSource;
 
         public delegate void SchemaHandler(string ObjectFullName);
+        public delegate void FiltersChanged();
         public event SchemaHandler OnSelectItem;
+        public event FiltersChanged OnFiltersChanged;
 
         private bool busy = false;
 
         public SchemaTreeView()
         {
             InitializeComponent();
-        }
-
-        public ISchemaBase DatabaseDestination { get; set; }
-
-        public ISchemaBase DatabaseSource
-        {
-            get { return databaseSource; }
-            set
-            {
-                databaseSource = value;
-                if (value != null)
-                {
-                    RebuildSchemaTree();
-                }
-            }
         }
         public List<ISchemaBase> GetCheckedSchemas()
         {
@@ -140,7 +126,7 @@ namespace OpenDBDiff.Front
             node.ForeColor = NodeColor;
         }
 
-        private void RebuildSchemaTree()
+        public void RebuildSchemaTree(ISchemaBase comparisionSchema)
         {
 
             string currentlySelectedNode = treeView1.SelectedNode != null ? treeView1.SelectedNode.Name : null;
@@ -149,8 +135,8 @@ namespace OpenDBDiff.Front
             this.busy = true;
             treeView1.BeginUpdate();
             treeView1.Nodes.Clear();
-            TreeNode databaseNode = treeView1.Nodes.Add("root", databaseSource.Name);
-            ReadProperties(databaseSource.GetType(), databaseNode.Nodes, databaseSource);
+            TreeNode databaseNode = treeView1.Nodes.Add("root", comparisionSchema.Name);
+            ReadProperties(comparisionSchema.GetType(), databaseNode.Nodes, comparisionSchema);
             treeView1.Sort();
             databaseNode.ImageKey = "Database";
             databaseNode.Expand();
@@ -254,7 +240,7 @@ namespace OpenDBDiff.Front
 
         private void FilterCheckbox_CheckedChanged(object sender, EventArgs e)
         {
-            RebuildSchemaTree();
+            OnFiltersChanged?.Invoke();
         }
 
         private void treeView1_AfterSelect(object sender, TreeViewEventArgs e)

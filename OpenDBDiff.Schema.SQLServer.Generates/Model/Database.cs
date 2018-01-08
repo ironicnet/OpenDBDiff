@@ -148,7 +148,16 @@ namespace OpenDBDiff.Schema.SQLServer.Generates.Model
                 //Set the value to the cloned object
                 property.SetValue(item, value, null);
             }
-
+            if (parent is Database)
+            {
+                item.Info = (parent as Database).Info;
+                item.Name = parent.Name;
+            }
+            else
+            {
+                item.Info = this.Info;
+                item.Name = this.Name;
+            }
             return item;
         }
 
