@@ -4,6 +4,7 @@ using System.Text.RegularExpressions;
 using DBDiff.Schema.Model;
 using DBDiff.Schema.SQLServer.Generates.Model.Util;
 using DBDiff.Schema.SQLServer.Generates.Options;
+using DBDiff.Schema;
 
 namespace DBDiff.Schema.SQLServer.Generates.Model
 {
@@ -32,30 +33,26 @@ namespace DBDiff.Schema.SQLServer.Generates.Model
             this.dropAction = dropAction;
         }
 
-        public override SQLScript Create()
+        public override void Create(SQLScriptList list, int deep=0)
         {
             int iCount = DependenciesCount;
             if (iCount > 0) iCount = iCount * -1;
-            if (!GetWasInsertInDiffList(addAction))
+            if (!GetWasInsertInDiffList(list, addAction))
             {
-                SetWasInsertInDiffList(addAction);
-                return new SQLScript(this.ToSqlAdd(), iCount, addAction);
+                SetWasInsertInDiffList(list, addAction);
+                list.Add(new SQLScript(this.ToSqlAdd(), iCount, addAction), deep);
             }
-            else
-                return null;
 
         }
 
-        public override SQLScript Drop()
+        public override void Drop(SQLScriptList list, int deep =0)
         {
             int iCount = DependenciesCount;
-            if (!GetWasInsertInDiffList(dropAction))
+            if (!GetWasInsertInDiffList(list, dropAction))
             {
-                SetWasInsertInDiffList(dropAction);
-                return new SQLScript(this.ToSqlDrop(), iCount, dropAction);
+                SetWasInsertInDiffList(list, dropAction);
+                list.Add(new SQLScript(this.ToSqlDrop(), iCount, dropAction),0);
             }
-            else
-                return null;
         }
 
         private static string GetObjectTypeName(Enums.ObjectType type)
@@ -147,11 +144,11 @@ namespace DBDiff.Schema.SQLServer.Generates.Model
             }
         }
 
-        private SQLScriptList RebuildDependencys(List<string> depends, int deepMin, int deepMax)
+        private void RebuildDependencys(SQLScriptList list, List<string> depends, int deepMin, int deepMax)
         {
             int newDeepMax = (deepMax != 0) ? deepMax + 1 : 0;
             int newDeepMin = (deepMin != 0) ? deepMin - 1 : 0;
-            SQLScriptList list = new SQLScriptList();
+            
             for (int j = 0; j < depends.Count; j++)
             {
                 ISchemaBase item = ((Database)Parent).Find(depends[j]);
@@ -167,38 +164,36 @@ namespace DBDiff.Schema.SQLServer.Generates.Model
                         if (item.Status != Enums.ObjectStatusType.DropStatus)
                         {
                             if (!((item.Parent.HasState(Enums.ObjectStatusType.RebuildStatus)) && (item.ObjectType == Enums.ObjectType.Trigger)))
-                                list.Add(item.Drop(), newDeepMin);
+                                item.Drop(list, newDeepMin);
                         }
                         if ((this.Status != Enums.ObjectStatusType.DropStatus) && (item.Status != Enums.ObjectStatusType.CreateStatus))
-                            list.Add(item.Create(), newDeepMax);
+                            item.Create(list, newDeepMax);
                         if (item.IsCodeType)
-                            list.AddRange(RebuildDependencys(((ICode)item).DependenciesOut, newDeepMin, newDeepMax));
+                            RebuildDependencys(list, ((ICode)item).DependenciesOut, newDeepMin, newDeepMax);
                     }
                 }
             };
-            return list;
         }
 
         /// <summary>
         /// Rebuilds the object and all its dependant objects.
         /// </summary>
         /// <returns></returns>
-        public SQLScriptList Rebuild()
+        public void Rebuild(SQLScriptList list)
         {
-            SQLScriptList list = new SQLScriptList();
-            list.AddRange(RebuildDependencys());
-            if (this.Status != Enums.ObjectStatusType.CreateStatus) list.Add(Drop(), deepMin);
-            if (this.Status != Enums.ObjectStatusType.DropStatus) list.Add(Create(), deepMax);
-            return list;
+            
+            RebuildDependencys(list);
+            if (this.Status != Enums.ObjectStatusType.CreateStatus) Drop(list, deepMin);
+            if (this.Status != Enums.ObjectStatusType.DropStatus) Create(list, deepMax);
         }
 
         /// <summary>
         /// Rebuilds the dependant objects.
         /// </summary>
         /// <returns></returns>
-        public SQLScriptList RebuildDependencys()
+        public void RebuildDependencys(SQLScriptList list)
         {
-            return RebuildDependencys(this.DependenciesOut, deepMin, deepMax);
+            RebuildDependencys(list, this.DependenciesOut, deepMin, deepMax);
         }
 
         public override string ToSql()

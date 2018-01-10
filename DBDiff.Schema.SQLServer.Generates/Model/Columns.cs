@@ -42,13 +42,12 @@ namespace DBDiff.Schema.SQLServer.Generates.Model
             return sql.ToString();
         }
 
-        public override SQLScriptList ToSqlDiff(System.Collections.Generic.ICollection<ISchemaBase> schemas)
+        public override void ToSqlDiff(SQLScriptList listDiff, System.Collections.Generic.ICollection<ISchemaBase> schemas)
         {
             string sqlDrop = "";
             string sqlAdd = "";
             string sqlCons = "";
             string sqlBinds = "";
-            SQLScriptList list = new SQLScriptList();
             if (Parent.Status != Enums.ObjectStatusType.RebuildStatus)
             {
                 this.ForEach(item =>
@@ -70,10 +69,10 @@ namespace DBDiff.Schema.SQLServer.Generates.Model
                         if (item.HasState(Enums.ObjectStatusType.DropStatus))
                         {
                             if (item.DefaultConstraint != null)
-                                list.Add(item.DefaultConstraint.Drop());
+                                item.DefaultConstraint.Drop(listDiff);
                             /*Si la columna formula debe ser eliminada y ya fue efectuada la operacion en otro momento, no
                              * se borra nuevamente*/
-                            if (!item.GetWasInsertInDiffList(Enums.ScripActionType.AlterColumnFormula))
+                            if (!item.GetWasInsertInDiffList(listDiff, Enums.ScripActionType.AlterColumnFormula))
                                 sqlDrop += "[" + item.Name + "],";
                         }
                         if (item.HasState(Enums.ObjectStatusType.CreateStatus))
@@ -81,13 +80,13 @@ namespace DBDiff.Schema.SQLServer.Generates.Model
                         if ((item.HasState(Enums.ObjectStatusType.AlterStatus) || (item.HasState(Enums.ObjectStatusType.RebuildDependenciesStatus))))
                         {
                             if ((!item.Parent.HasState(Enums.ObjectStatusType.RebuildDependenciesStatus) || (!item.Parent.HasState(Enums.ObjectStatusType.RebuildStatus))))
-                                list.AddRange(item.RebuildSchemaBindingDependencies());
-                            list.AddRange(item.RebuildConstraint(false));
-                            list.AddRange(item.RebuildDependencies());
-                            list.AddRange(item.Alter(Enums.ScripActionType.AlterTable));
+                                item.RebuildSchemaBindingDependencies(listDiff);
+                            item.RebuildConstraint(listDiff, false);
+                            item.RebuildDependencies(listDiff);
+                            item.Alter(listDiff, Enums.ScripActionType.AlterTable);
                         }
                         if (item.HasState(Enums.ObjectStatusType.UpdateStatus))
-                            list.Add("UPDATE " + Parent.FullName + " SET [" + item.Name + "] = " + item.DefaultForceValue + " WHERE [" + item.Name + "] IS NULL\r\nGO\r\n", 0, Enums.ScripActionType.UpdateTable);
+                            listDiff.Add("UPDATE " + Parent.FullName + " SET [" + item.Name + "] = " + item.DefaultForceValue + " WHERE [" + item.Name + "] IS NULL\r\nGO\r\n", 0, Enums.ScripActionType.UpdateTable);
                         if (item.HasState(Enums.ObjectStatusType.BindStatus))
                         {
                             if (item.Rule.Id != 0)
@@ -96,7 +95,7 @@ namespace DBDiff.Schema.SQLServer.Generates.Model
                                 sqlBinds += item.Rule.ToSQLAddUnBind();
                         }
                         if (item.DefaultConstraint != null)
-                            list.AddRange(item.DefaultConstraint.ToSqlDiff(schemas));
+                            item.DefaultConstraint.ToSqlDiff(listDiff, schemas);
                     }
                 });
                 if (!String.IsNullOrEmpty(sqlDrop))
@@ -105,7 +104,7 @@ namespace DBDiff.Schema.SQLServer.Generates.Model
                     sqlAdd = "ALTER TABLE " + Parent.FullName + " ADD " + sqlAdd.Substring(0, sqlAdd.Length - 1) + "\r\nGO\r\n";
 
                 if (!String.IsNullOrEmpty(sqlDrop + sqlAdd + sqlCons + sqlBinds))
-                    list.Add(sqlDrop + sqlAdd + sqlBinds, 0, Enums.ScripActionType.AlterTable);
+                    listDiff.Add(sqlDrop + sqlAdd + sqlBinds, 0, Enums.ScripActionType.AlterTable);
             }
             else
             {
@@ -115,7 +114,6 @@ namespace DBDiff.Schema.SQLServer.Generates.Model
                         item.RootParent.ActionMessage[item.Parent.FullName].Add(item);
                 });
             }
-            return list;
         }
     }
 }

@@ -275,36 +275,32 @@ namespace DBDiff.Schema.SQLServer.Generates.Model
             return ToSqlDrop(null);
         }
 
-        public override SQLScript Create()
+        public override void Create(SQLScriptList list, int deep =0)
         {
             Enums.ScripActionType action = Enums.ScripActionType.AddConstraint;
             if (this.Type == ConstraintType.ForeignKey)
                 action = Enums.ScripActionType.AddConstraintFK;
             if (this.Type == ConstraintType.PrimaryKey)
                 action = Enums.ScripActionType.AddConstraintPK;
-            if (!GetWasInsertInDiffList(action))
+            if (!GetWasInsertInDiffList(list, action))
             {
-                SetWasInsertInDiffList(action);
-                return new SQLScript(this.ToSqlAdd(), ((Table)Parent).DependenciesCount, action);
+                SetWasInsertInDiffList(list, action);
+                list.Add(new SQLScript(this.ToSqlAdd(), ((Table)Parent).DependenciesCount, action), deep);
             }
-            else
-                return null;
         }
 
-        public override SQLScript Drop()
+        public override void Drop(SQLScriptList list, int deep =0)
         {
             Enums.ScripActionType action = Enums.ScripActionType.DropConstraint;
             if (this.Type == ConstraintType.ForeignKey)
                 action = Enums.ScripActionType.DropConstraintFK;
             if (this.Type == ConstraintType.PrimaryKey)
                 action = Enums.ScripActionType.DropConstraintPK;
-            if (!GetWasInsertInDiffList(action))
+            if (!GetWasInsertInDiffList(list, action))
             {
-                SetWasInsertInDiffList(action);
-                return new SQLScript(this.ToSqlDrop(), ((Table)Parent).DependenciesCount, action);
+                SetWasInsertInDiffList(list, action);
+                list.Add(new SQLScript(this.ToSqlDrop(), ((Table)Parent).DependenciesCount, action), deep);
             }
-            else
-                return null;
         }
 
         public string ToSqlDrop(string FileGroupName)
@@ -326,34 +322,32 @@ namespace DBDiff.Schema.SQLServer.Generates.Model
             }
         }
 
-        public override SQLScriptList ToSqlDiff(System.Collections.Generic.ICollection<ISchemaBase> schemas)
+        public override void ToSqlDiff(SQLScriptList listDiff, System.Collections.Generic.ICollection<ISchemaBase> schemas)
         {
-            SQLScriptList list = new SQLScriptList();
             if (this.Status != Enums.ObjectStatusType.OriginalStatus)
                 RootParent.ActionMessage[Parent.FullName].Add(this);
 
             if (this.HasState(Enums.ObjectStatusType.DropStatus))
             {
                 if (this.Parent.Status != Enums.ObjectStatusType.RebuildStatus)
-                    list.Add(Drop());
+                    Drop(listDiff);
             }
             if (this.HasState(Enums.ObjectStatusType.CreateStatus))
-                list.Add(Create());
+                Create(listDiff);
             if (this.HasState(Enums.ObjectStatusType.AlterStatus))
             {
-                list.Add(Drop());
-                list.Add(Create());
+                Drop(listDiff);
+                Create(listDiff);
             }
             if (this.HasState(Enums.ObjectStatusType.DisabledStatus))
             {
-                list.Add(this.ToSQLEnabledDisabled(), ((Table)Parent).DependenciesCount, Enums.ScripActionType.AlterConstraint);
+                listDiff.Add(this.ToSQLEnabledDisabled(), ((Table)Parent).DependenciesCount, Enums.ScripActionType.AlterConstraint);
             }
             /*if (this.Status == StatusEnum.ObjectStatusType.ChangeFileGroup)
             {
-                list.Add(this.ToSQLDrop(this.Index.FileGroup), ((Table)Parent).DependenciesCount, actionDrop);
-                list.Add(this.ToSQLAdd(), ((Table)Parent).DependenciesCount, actionAdd);
+                listDiff.Add(this.ToSQLDrop(this.Index.FileGroup), ((Table)Parent).DependenciesCount, actionDrop);
+                listDiff.Add(this.ToSQLAdd(), ((Table)Parent).DependenciesCount, actionAdd);
             }*/
-            return list;
         }
     }
 }

@@ -463,24 +463,22 @@ namespace DBDiff.Schema.SQLServer.Generates.Model
             return sql;
         }
 
-        public SQLScriptList RebuildDependencies()
+        public void RebuildDependencies(SQLScriptList  list)
         {
-            SQLScriptList list = new SQLScriptList();
-            list.AddRange(RebuildConstraint());
-            list.AddRange(RebuildIndex());
-            list.AddRange(RebuildFullTextIndex());
-            return list;
+            RebuildConstraint(list);
+            RebuildIndex(list);
+            RebuildFullTextIndex(list);
         }
 
-        private SQLScriptList RebuildFullTextIndex()
+        private void RebuildFullTextIndex(SQLScriptList list)
         {
-            return RebuildFullTextIndex(null);
+            RebuildFullTextIndex(list, null);
         }
 
-        private SQLScriptList RebuildFullTextIndex(string index)
+        private void RebuildFullTextIndex(SQLScriptList list, string index)
         {
             bool it;
-            SQLScriptList list = new SQLScriptList();
+            
             ((Table)Parent).FullTextIndex.ForEach(item =>
             {
                 if (index == null)
@@ -489,33 +487,31 @@ namespace DBDiff.Schema.SQLServer.Generates.Model
                     it = item.Index.Equals(index);
                 if (it)
                 {
-                    if (item.Status != Enums.ObjectStatusType.CreateStatus) list.Add(item.Drop());
-                    if (item.Status != Enums.ObjectStatusType.DropStatus) list.Add(item.Create());
+                    if (item.Status != Enums.ObjectStatusType.CreateStatus) item.Drop(list);
+                    if (item.Status != Enums.ObjectStatusType.DropStatus) item.Create(list);
                 }
             }
             );
-            return list;
         }
 
-        private SQLScriptList RebuildConstraint()
+        private void RebuildConstraint(SQLScriptList list)
         {
-            SQLScriptList list = new SQLScriptList();
+            
             ((Table)Parent).Constraints.ForEach(item =>
             {
                 ConstraintColumn ic = item.Columns.Find(this.Id);
                 if (ic != null)
                 {
-                    if (item.Status != Enums.ObjectStatusType.CreateStatus) list.Add(item.Drop());
-                    if (item.Status != Enums.ObjectStatusType.DropStatus) list.Add(item.Create());
-                    list.AddRange(RebuildFullTextIndex(item.Name));
+                    if (item.Status != Enums.ObjectStatusType.CreateStatus) item.Drop(list);
+                    if (item.Status != Enums.ObjectStatusType.DropStatus) item.Create(list);
+                    RebuildFullTextIndex(list, item.Name);
                 }
             });
-            return list;
         }
 
-        private SQLScriptList RebuildIndex()
+        private void RebuildIndex(SQLScriptList  list)
         {
-            SQLScriptList list = new SQLScriptList();
+            
             if (HasIndexDependencies)
             {
                 ((Table)Parent).Indexes.ForEach(item =>
@@ -523,49 +519,44 @@ namespace DBDiff.Schema.SQLServer.Generates.Model
                         IndexColumn ic = item.Columns.Find(this.Id);
                         if (ic != null)
                         {
-                            if (item.Status != Enums.ObjectStatusType.CreateStatus) list.Add(item.Drop());
-                            if (item.Status != Enums.ObjectStatusType.DropStatus) list.Add(item.Create());
-                            list.AddRange(RebuildFullTextIndex(item.Name));
+                            if (item.Status != Enums.ObjectStatusType.CreateStatus) item.Drop(list);
+                            if (item.Status != Enums.ObjectStatusType.DropStatus) item.Create(list);
+                            RebuildFullTextIndex(list, item.Name);
                         }
                     });
             }
-            return list;
         }
 
-        public SQLScriptList RebuildConstraint(Boolean Check)
+        public void RebuildConstraint(SQLScriptList list, Boolean Check)
         {
-            SQLScriptList list = new SQLScriptList();
+            
             if (DefaultConstraint != null)
             {
-                if ((!Check) || (DefaultConstraint.CanCreate)) list.Add(DefaultConstraint.Create());
-                list.Add(DefaultConstraint.Drop());
+                if ((!Check) || (DefaultConstraint.CanCreate)) DefaultConstraint.Create(list);
+                DefaultConstraint.Drop(list);
             }
-            return list;
         }
 
-        public SQLScriptList RebuildSchemaBindingDependencies()
+        public void RebuildSchemaBindingDependencies(SQLScriptList list)
         {
-            SQLScriptList list = new SQLScriptList();
+            
             List<ISchemaBase> items = ((Database)this.Parent.Parent).Dependencies.Find(this.Parent.Id, this.Id, 0);
             items.ForEach(item =>
             {
                 if ((item.ObjectType == Enums.ObjectType.Function) || (item.ObjectType == Enums.ObjectType.View))
                 {
                     if (item.Status != Enums.ObjectStatusType.CreateStatus)
-                        list.Add(item.Drop());
+                        item.Drop(list);
                     if (item.Status != Enums.ObjectStatusType.DropStatus)
-                        list.Add(item.Create());
+                        item.Create(list);
                 }
             });
-            return list;
         }
 
-        public SQLScriptList Alter(Enums.ScripActionType typeStatus)
+        public void Alter(SQLScriptList list, Enums.ScripActionType typeStatus)
         {
-            SQLScriptList list = new SQLScriptList();
             string sql = "ALTER TABLE " + Parent.FullName + " ALTER COLUMN " + this.ToSql(false) + "\r\nGO\r\n";
             list.Add(sql, 0, typeStatus);
-            return list;
         }
 
         /// <summary>

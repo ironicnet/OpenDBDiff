@@ -12,7 +12,6 @@ namespace DBDiff.Schema.Model
         private ISchemaBase parent;
         private string nameCharacterOpen;
         private string nameCharacterClose;
-        private Hashtable wasInsertInDiffList;
         private IDatabase rootParent = null;
 
         protected SchemaBase(string nameCharacterOpen, string nameCharacterClose, Enums.ObjectType objectType)
@@ -130,17 +129,17 @@ namespace DBDiff.Schema.Model
         /// <returns>
         /// A list (<see cref="SQLScriptList"/>) of scripts to run to sync
         /// </returns>
-        public virtual SQLScriptList ToSqlDiff(ICollection<ISchemaBase> schemas)
-        {
-            return null;
-        }
-
-        public virtual SQLScript Create()
+        public virtual void ToSqlDiff(SQLScriptList list, ICollection<ISchemaBase> schemas)
         {
             throw new NotImplementedException();
         }
 
-        public virtual SQLScript Drop()
+        public virtual void Create(SQLScriptList list, int deep =0)
+        {
+            throw new NotImplementedException();
+        }
+
+        public virtual void Drop(SQLScriptList list, int deep = 0)
         {
             throw new NotImplementedException();
         }
@@ -149,27 +148,25 @@ namespace DBDiff.Schema.Model
         /// </summary>
         /// <param name="action">The action to check in the list</param>
         /// <returns>True if is already inserted. False if it wasn't</returns>
-        public Boolean GetWasInsertInDiffList(Enums.ScripActionType action)
+        public Boolean GetWasInsertInDiffList(SQLScriptList listDiff, Enums.ScripActionType action)
         {
-            if (wasInsertInDiffList != null)
-                return (wasInsertInDiffList.ContainsKey(action));
-            else
-                return false;
+            return listDiff.IsRegistered(this, action);
         }
 
         /// <summary>
         /// Sets the object as inserted in the list of differences script
         /// </summary>
-        public void SetWasInsertInDiffList(Enums.ScripActionType action)
+        public void SetWasInsertInDiffList(SQLScriptList listDiff, Enums.ScripActionType action)
         {
-            if (wasInsertInDiffList == null) wasInsertInDiffList = new Hashtable();
-            if (!wasInsertInDiffList.ContainsKey(action))
-                wasInsertInDiffList.Add(action, true);
+            if (!listDiff.IsRegistered(this, action))
+            {
+                listDiff.Register(this, action);
+            }
         }
 
-        public void ResetWasInsertInDiffList()
+        public void ResetWasInsertInDiffList(SQLScriptList listDiff)
         {
-            this.wasInsertInDiffList = null;
+            listDiff.Unregister(this);
         }
 
         /// <summary>

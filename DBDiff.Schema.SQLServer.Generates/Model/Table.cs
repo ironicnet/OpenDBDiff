@@ -308,7 +308,7 @@ namespace DBDiff.Schema.SQLServer.Generates.Model
                         if (!found)
                         {
                             Status = Enums.ObjectStatusType.RebuildStatus;
-                            listDiff = ToSqlDiff();
+                            listDiff = ToSqlDiff(listDiff);
                         }
                     }
                     else
@@ -323,10 +323,8 @@ namespace DBDiff.Schema.SQLServer.Generates.Model
         /// <summary>
         /// Devuelve el schema de diferencias de la tabla en formato SQL.
         /// </summary>
-        public override SQLScriptList ToSqlDiff(System.Collections.Generic.ICollection<ISchemaBase> schemas)
+        public override void ToSqlDiff(SQLScriptList listDiff, System.Collections.Generic.ICollection<ISchemaBase> schemas)
         {
-            var listDiff = new SQLScriptList();
-
             if (Status != Enums.ObjectStatusType.OriginalStatus)
             {
                 if (((Database)Parent).Options.Ignore.FilterTable)
@@ -356,46 +354,45 @@ namespace DBDiff.Schema.SQLServer.Generates.Model
             {
                 GenerateDependencis();
                 listDiff.AddRange(ToSQLDropDependencis());
-                listDiff.AddRange(Columns.ToSqlDiff(schemas));
+                Columns.ToSqlDiff(listDiff, schemas);
                 listDiff.AddRange(ToSQLCreateDependencis());
-                listDiff.AddRange(Constraints.ToSqlDiff());
-                listDiff.AddRange(Indexes.ToSqlDiff());
-                listDiff.AddRange(Options.ToSqlDiff());
-                listDiff.AddRange(Triggers.ToSqlDiff());
-                listDiff.AddRange(CLRTriggers.ToSqlDiff());
-                listDiff.AddRange(FullTextIndex.ToSqlDiff());
+                Constraints.ToSqlDiff(listDiff);
+                Indexes.ToSqlDiff(listDiff);
+                Options.ToSqlDiff(listDiff);
+                Triggers.ToSqlDiff(listDiff);
+                CLRTriggers.ToSqlDiff(listDiff);
+                FullTextIndex.ToSqlDiff(listDiff);
             }
             if (HasState(Enums.ObjectStatusType.AlterStatus))
             {
-                listDiff.AddRange(Columns.ToSqlDiff(schemas));
-                listDiff.AddRange(Constraints.ToSqlDiff());
-                listDiff.AddRange(Indexes.ToSqlDiff());
-                listDiff.AddRange(Options.ToSqlDiff());
-                listDiff.AddRange(Triggers.ToSqlDiff());
-                listDiff.AddRange(CLRTriggers.ToSqlDiff());
-                listDiff.AddRange(FullTextIndex.ToSqlDiff());
+                Columns.ToSqlDiff(listDiff, schemas);
+                Constraints.ToSqlDiff(listDiff);
+                Indexes.ToSqlDiff(listDiff);
+                Options.ToSqlDiff(listDiff);
+                Triggers.ToSqlDiff(listDiff);
+                CLRTriggers.ToSqlDiff(listDiff);
+                FullTextIndex.ToSqlDiff(listDiff);
             }
             if (HasState(Enums.ObjectStatusType.RebuildStatus))
             {
                 GenerateDependencis();
-                listDiff.AddRange(ToSQLRebuild());
-                listDiff.AddRange(Columns.ToSqlDiff());
-                listDiff.AddRange(Constraints.ToSqlDiff());
-                listDiff.AddRange(Indexes.ToSqlDiff());
-                listDiff.AddRange(Options.ToSqlDiff());
+                ToSQLRebuild(listDiff);
+                Columns.ToSqlDiff(listDiff);
+                Constraints.ToSqlDiff(listDiff);
+                Indexes.ToSqlDiff(listDiff);
+                Options.ToSqlDiff(listDiff);
                 //Como recrea la tabla, solo pone los nuevos triggers, por eso va ToSQL y no ToSQLDiff
                 listDiff.Add(Triggers.ToSql(), dependenciesCount, Enums.ScripActionType.AddTrigger);
                 listDiff.Add(CLRTriggers.ToSql(), dependenciesCount, Enums.ScripActionType.AddTrigger);
-                listDiff.AddRange(FullTextIndex.ToSqlDiff());
+                FullTextIndex.ToSqlDiff(listDiff);
             }
             if (HasState(Enums.ObjectStatusType.DisabledStatus))
             {
                 listDiff.Add(ToSqlChangeTracking(), 0, Enums.ScripActionType.AlterTableChangeTracking);
             }
-            return listDiff;
         }
 
-        private string ToSQLTableRebuild()
+        private void ToSQLTableRebuild(SQLScriptList listDiff)
         {
             string sql = "";
             string tempTable = "Temp" + Name;
@@ -437,7 +434,7 @@ namespace DBDiff.Schema.SQLServer.Generates.Model
             {
                 listColumns = listColumns.Substring(0, listColumns.Length - 1);
                 listValues = listValues.Substring(0, listValues.Length - 1);
-                sql += ToSQLTemp(tempTable) + "\r\n";
+                sql += ToSQLTemp(listDiff, tempTable) + "\r\n";
                 if ((HasIdentityColumn) && (!IsIdentityNew))
                     sql += "SET IDENTITY_INSERT [" + Owner + "].[" + tempTable + "] ON\r\n";
                 sql += "INSERT INTO [" + Owner + "].[" + tempTable + "] (" + listColumns + ")" + " SELECT " +
@@ -464,19 +461,17 @@ namespace DBDiff.Schema.SQLServer.Generates.Model
             }
             else
                 sql = "";
-            return sql;
+            listDiff.Add(sql, dependenciesCount, Enums.ScripActionType.RebuildTable);
         }
 
-        private SQLScriptList ToSQLRebuild()
+        private void ToSQLRebuild(SQLScriptList listDiff)
         {
-            var listDiff = new SQLScriptList();
             listDiff.AddRange(ToSQLDropDependencis());
-            listDiff.Add(ToSQLTableRebuild(), dependenciesCount, Enums.ScripActionType.RebuildTable);
+            ToSQLTableRebuild(listDiff);
             listDiff.AddRange(ToSQLCreateDependencis());
-            return listDiff;
         }
 
-        private string ToSQLTemp(String TableName)
+        private string ToSQLTemp(SQLScriptList listDiff, String TableName)
         {
             string sql = "";
             sql += "CREATE TABLE [" + Owner + "].[" + TableName + "]\r\n(\r\n";
@@ -504,7 +499,7 @@ namespace DBDiff.Schema.SQLServer.Generates.Model
                                             {
                                                 item.Name = "Temp_XX_" + item.Name;
                                                 sql += "\t" + item.ToSql() + ",\r\n";
-                                                item.SetWasInsertInDiffList(Enums.ScripActionType.AddConstraint);
+                                                item.SetWasInsertInDiffList(listDiff, Enums.ScripActionType.AddConstraint);
                                                 item.Name = item.Name.Substring(8, item.Name.Length - 8);
                                             }
                                         });
@@ -587,7 +582,7 @@ namespace DBDiff.Schema.SQLServer.Generates.Model
                                             /*Si la FK pertenece a la misma tabla, no se debe explicitar el DROP CONSTRAINT antes de hacer el DROP TABLE*/
                                             if (constraint.Parent.Id != constraint.RelationalTableId)
                                             {
-                                                listDiff.Add(constraint.Drop());
+                                                constraint.Drop(listDiff);
                                             }
                                         }
                                     });
@@ -619,7 +614,7 @@ namespace DBDiff.Schema.SQLServer.Generates.Model
                             addDependencie = false;
                     }
                     if (addDependencie)
-                        listDiff.Add(dependencis[index].Drop());
+                        dependencis[index].Drop(listDiff);
                 }
             }
             //Se buscan todas las columns constraints.
@@ -631,7 +626,7 @@ namespace DBDiff.Schema.SQLServer.Generates.Model
                                              (column.DefaultConstraint.Status == Enums.ObjectStatusType.DropStatus) ||
                                              (column.DefaultConstraint.Status == Enums.ObjectStatusType.AlterStatus)) &&
                                             (column.Status != Enums.ObjectStatusType.CreateStatus))
-                                            listDiff.Add(column.DefaultConstraint.Drop());
+                                            column.DefaultConstraint.Drop(listDiff);
                                     }
                                 });
             return listDiff;
@@ -655,7 +650,7 @@ namespace DBDiff.Schema.SQLServer.Generates.Model
                             addDependencie = false;
                     }
                     if (addDependencie)
-                        listDiff.Add(dependencis[index].Create());
+                        dependencis[index].Create(listDiff);
                 }
             }
             //Se buscan todas las columns constraints.
@@ -665,7 +660,7 @@ namespace DBDiff.Schema.SQLServer.Generates.Model
                 {
                     if ((Columns[index].DefaultConstraint.CanCreate) &&
                         (Columns.Parent.Status != Enums.ObjectStatusType.RebuildStatus))
-                        listDiff.Add(Columns[index].DefaultConstraint.Create());
+                        Columns[index].DefaultConstraint.Create(listDiff);
                 }
             }
             return listDiff;

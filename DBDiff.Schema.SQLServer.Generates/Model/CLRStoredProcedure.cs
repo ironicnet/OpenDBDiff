@@ -28,20 +28,17 @@ namespace DBDiff.Schema.SQLServer.Generates.Model
             return sql;
         }
 
-        public override SQLScriptList ToSqlDiff(System.Collections.Generic.ICollection<ISchemaBase> schemas)
+        public override void ToSqlDiff(SQLScriptList listDiff, System.Collections.Generic.ICollection<ISchemaBase> schemas)
         {
-            SQLScriptList list = new SQLScriptList();
-
             if (this.HasState(Enums.ObjectStatusType.DropStatus))
-                list.Add(Drop());
+                Drop(listDiff);
             if (this.HasState(Enums.ObjectStatusType.CreateStatus))
-                list.Add(Create());
+                Create(listDiff);
             if (this.Status == Enums.ObjectStatusType.AlterStatus)
             {
-                list.AddRange(Rebuild());
+                RebuildDependencys(listDiff);
             }
-            list.AddRange(this.ExtendedProperties.ToSqlDiff());
-            return list;
+            this.ExtendedProperties.ToSqlDiff(listDiff);
         }
     }
 }

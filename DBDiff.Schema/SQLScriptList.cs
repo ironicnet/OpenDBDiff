@@ -109,27 +109,54 @@ namespace DBDiff.Schema
             list.ForEach(item => { if ((item.Status == Enums.ScripActionType.AlterView) || (item.Status == Enums.ScripActionType.AlterFunction) || (item.Status == Enums.ScripActionType.AlterProcedure)) alter.Add(item); });
             return alter;
         }
+        Dictionary<ISchemaBase, List<Enums.ScripActionType>> registered = new Dictionary<ISchemaBase, List<Enums.ScripActionType>>();
+        internal bool IsRegistered(ISchemaBase schemaBase, Enums.ScripActionType action)
+        {
+            return (registered.ContainsKey(schemaBase) && registered[schemaBase].Contains(action));
+        }
+
+        internal void Register(ISchemaBase schemaBase, Enums.ScripActionType action)
+        {
+            if (registered.ContainsKey(schemaBase))
+            {   
+                registered[schemaBase].Add(action);
+            }
+            else
+            {
+                registered.Add(schemaBase, new List<Enums.ScripActionType>() { action });
+            }
+        }
+
+        internal void Unregister(SchemaBase schemaBase)
+        {
+            registered.Remove(schemaBase);
+        }
     }
 
     public static class SQLScriptListExtensionMethod
     {
-        public static SQLScriptList WarnMissingScript(this SQLScriptList scriptList, ISchemaBase scriptSource)
+        public static void WarnMissingScript(this SQLScriptList scriptList, ISchemaBase scriptSource)
+        {
+            if (scriptList.IsMissingScript(scriptSource))
+            {
+                scriptList.Add(String.Format("\r\n--\r\n-- DIFF-ERROR 0x{0:x8}.{1:d3}: Missing {2} script for {3} '{4}'\r\n--\r\n\r\n", (int)scriptSource.Status, (int)scriptSource.ObjectType, scriptSource.Status, scriptSource.ObjectType, scriptSource.Name), 0, Enums.ScripActionType.None);
+            }
+        }
+        public static bool IsMissingScript(this SQLScriptList scriptList, ISchemaBase scriptSource)
         {
             if (scriptList == null || scriptSource == null || scriptSource.Status == Enums.ObjectStatusType.OriginalStatus)
             {
-                return scriptList;
+                return false;
             }
 
             for (int i = 0; i < scriptList.Count; ++i)
             {
                 if (!String.IsNullOrEmpty(scriptList[i].SQL))
                 {
-                    return scriptList;
+                    return false;
                 }
             }
-
-            scriptList.Add(String.Format("\r\n--\r\n-- DIFF-ERROR 0x{0:x8}.{1:d3}: Missing {2} script for {3} '{4}'\r\n--\r\n\r\n", (int)scriptSource.Status, (int)scriptSource.ObjectType, scriptSource.Status, scriptSource.ObjectType, scriptSource.Name), 0, Enums.ScripActionType.None);
-            return scriptList;
+            return true;
         }
     }
 }

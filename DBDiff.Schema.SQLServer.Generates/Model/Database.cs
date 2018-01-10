@@ -200,11 +200,10 @@ namespace DBDiff.Schema.SQLServer.Generates.Model
         {
             this.t
         }*/
-        public override SQLScriptList ToSqlDiff(System.Collections.Generic.ICollection<ISchemaBase> schemas)
+        public override void ToSqlDiff(SQLScriptList listDiff, System.Collections.Generic.ICollection<ISchemaBase> schemas)
         {
             var isAzure10 = this.Info.Version == DatabaseInfo.VersionTypeEnum.SQLServerAzure10;
 
-            var listDiff = new SQLScriptList();
             listDiff.Add(new SQLScript(String.Format(@"/*
 
     Open DBDiff {0}
@@ -233,34 +232,33 @@ namespace DBDiff.Schema.SQLServer.Generates.Model
             if (!isAzure10)
             {
                 listDiff.Add("USE [" + Name + "]\r\nGO\r\n\r\n", 0, Enums.ScripActionType.UseDatabase);
-                listDiff.AddRange(Assemblies.ToSqlDiff(schemas));
-                listDiff.AddRange(UserTypes.ToSqlDiff(schemas));
+                Assemblies.ToSqlDiff(listDiff, schemas);
+                UserTypes.ToSqlDiff(listDiff, schemas);
             }
-            listDiff.AddRange(TablesTypes.ToSqlDiff(schemas));
-            listDiff.AddRange(Tables.ToSqlDiff(schemas));
-            listDiff.AddRange(Rules.ToSqlDiff(schemas));
-            listDiff.AddRange(Schemas.ToSqlDiff(schemas));
-            listDiff.AddRange(XmlSchemas.ToSqlDiff(schemas));
-            listDiff.AddRange(Procedures.ToSqlDiff(schemas));
+            TablesTypes.ToSqlDiff(listDiff, schemas);
+            Tables.ToSqlDiff(listDiff, schemas);
+            Rules.ToSqlDiff(listDiff, schemas);
+            Schemas.ToSqlDiff(listDiff, schemas);
+            XmlSchemas.ToSqlDiff(listDiff, schemas);
+            Procedures.ToSqlDiff(listDiff, schemas);
             if (!isAzure10)
             {
-                listDiff.AddRange(CLRProcedures.ToSqlDiff(schemas));
-                listDiff.AddRange(CLRFunctions.ToSqlDiff(schemas));
-                listDiff.AddRange(FileGroups.ToSqlDiff(schemas));
+                CLRProcedures.ToSqlDiff(listDiff, schemas);
+                CLRFunctions.ToSqlDiff(listDiff, schemas);
+                FileGroups.ToSqlDiff(listDiff, schemas);
             }
-            listDiff.AddRange(DDLTriggers.ToSqlDiff(schemas));
-            listDiff.AddRange(Synonyms.ToSqlDiff(schemas));
-            listDiff.AddRange(Views.ToSqlDiff(schemas));
-            listDiff.AddRange(Users.ToSqlDiff(schemas));
-            listDiff.AddRange(Functions.ToSqlDiff(schemas));
-            listDiff.AddRange(Roles.ToSqlDiff(schemas));
-            listDiff.AddRange(PartitionFunctions.ToSqlDiff(schemas));
-            listDiff.AddRange(PartitionSchemes.ToSqlDiff(schemas));
+            DDLTriggers.ToSqlDiff(listDiff, schemas);
+            Synonyms.ToSqlDiff(listDiff, schemas);
+            Views.ToSqlDiff(listDiff, schemas);
+            Users.ToSqlDiff(listDiff, schemas);
+            Functions.ToSqlDiff(listDiff, schemas);
+            Roles.ToSqlDiff(listDiff, schemas);
+            PartitionFunctions.ToSqlDiff(listDiff, schemas);
+            PartitionSchemes.ToSqlDiff(listDiff, schemas);
             if (!isAzure10)
             {
-                listDiff.AddRange(FullText.ToSqlDiff(schemas));
+                FullText.ToSqlDiff(listDiff, schemas);
             }
-            return listDiff;
         }
 
         public override string ToSqlDrop()

@@ -38,16 +38,16 @@ namespace DBDiff.Schema.SQLServer.Generates.Model
 
         public string Value { get; set; }
 
-        public override SQLScript Create()
+        public override void Create(SQLScriptList list, int deep =0)
         {
             Enums.ScripActionType action = Enums.ScripActionType.AddExtendedProperty;
-            return new SQLScript(this.ToSqlAdd(), 0, action);
+            list.Add(new SQLScript(this.ToSqlAdd(), 0, action), deep);
         }
 
-        public override SQLScript Drop()
+        public override void Drop(SQLScriptList list, int deep =0)
         {
             Enums.ScripActionType action = Enums.ScripActionType.DropExtendedProperty;
-            return new SQLScript(this.ToSqlDrop(), 0, action);
+            list.Add(new SQLScript(this.ToSqlDrop(), 0, action), deep);
         }
 
         public override Enums.ObjectStatusType Status { get; set; }
@@ -81,17 +81,15 @@ namespace DBDiff.Schema.SQLServer.Generates.Model
             return ToSqlAdd();
         }
 
-        public override SQLScriptList ToSqlDiff(System.Collections.Generic.ICollection<ISchemaBase> schemas)
+        public override void ToSqlDiff(SQLScriptList listDiff, System.Collections.Generic.ICollection<ISchemaBase> schemas)
         {
-            SQLScriptList list = new SQLScriptList();
             if (this.Parent.Status != Enums.ObjectStatusType.CreateStatus)
             {
                 if (this.Status == Enums.ObjectStatusType.CreateStatus)
-                    list.Add(this.Create());
+                    this.Create(listDiff);
                 if (this.Status == Enums.ObjectStatusType.DropStatus)
-                    list.Add(this.Drop());
+                    this.Drop(listDiff);
             }
-            return list;
         }
     }
 }

@@ -5,7 +5,7 @@ namespace DBDiff.Schema.SQLServer.Generates.Model
 {
     public interface ICode : ISchemaBase
     {
-        SQLScriptList Rebuild();
+        void Rebuild(SQLScriptList list);
         List<string> DependenciesIn { get; set; }
         List<string> DependenciesOut { get; set; }
         bool IsSchemaBinding { get; set; }

@@ -15,15 +15,15 @@ namespace DBDiff.Schema.Model
         Enums.ObjectStatusType Status { get; set; }
         Boolean IsSystem { get; set; }
         Enums.ObjectType ObjectType { get; set; }
-        Boolean GetWasInsertInDiffList(Enums.ScripActionType action);
-        void SetWasInsertInDiffList(Enums.ScripActionType action);
-        void ResetWasInsertInDiffList();
+        Boolean GetWasInsertInDiffList(SQLScriptList listDiff, Enums.ScripActionType action);
+        void SetWasInsertInDiffList(SQLScriptList listDiff, Enums.ScripActionType action);
+        void ResetWasInsertInDiffList(SQLScriptList listDiff);
         string ToSqlDrop();
         string ToSqlAdd();
         string ToSql();
-        SQLScriptList ToSqlDiff(System.Collections.Generic.ICollection<ISchemaBase> schemas);
-        SQLScript Create();
-        SQLScript Drop();
+        void ToSqlDiff(SQLScriptList listDiff, System.Collections.Generic.ICollection<ISchemaBase> schemas);
+        void Create(SQLScriptList list, int deep = 0);
+        void Drop(SQLScriptList list, int deep = 0);
         int CompareFullNameTo(string name, string myName);
         Boolean IsCodeType { get; }
         IDatabase RootParent { get; }

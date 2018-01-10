@@ -71,7 +71,9 @@ namespace DBDiff.Front
                     txtSyncScript.Styles.LineNumber.BackColor = Color.White;
                     txtSyncScript.Styles.LineNumber.IsVisible = false;
                     errorLocation = "Generating Synchronized Script";
-                    txtSyncScript.Text = selectedDestination.ToSqlDiff(this._selectedSchemas).ToSQL();
+                    SQLScriptList sqlDiff = new SQLScriptList();
+                    selectedDestination.ToSqlDiff(sqlDiff, this._selectedSchemas);
+                    txtSyncScript.Text = sqlDiff.ToSQL();
                     txtSyncScript.IsReadOnly = true;
                     schemaTreeView1.DatabaseSource = selectedDestination;
                     schemaTreeView1.DatabaseDestination = selectedOrigin;
@@ -208,7 +210,9 @@ namespace DBDiff.Front
             {
                 this._selectedSchemas = this.schemaTreeView1.GetCheckedSchemas();
                 this.txtSyncScript.IsReadOnly = false;
-                this.txtSyncScript.Text = db.ToSqlDiff(this._selectedSchemas).ToSQL();
+                SQLScriptList sqlDiff = new SQLScriptList();
+                db.ToSqlDiff(sqlDiff, _selectedSchemas);
+                this.txtSyncScript.Text = sqlDiff.ToSQL();
                 this.txtSyncScript.IsReadOnly = false;
             }
         }
@@ -319,7 +323,9 @@ namespace DBDiff.Front
                         using (StreamWriter writer = new StreamWriter(saveFileDialog1.FileName, false))
                         {
                             this._selectedSchemas = this.schemaTreeView1.GetCheckedSchemas();
-                            writer.Write(db.ToSqlDiff(this._selectedSchemas).ToSQL());
+                            SQLScriptList sqlDiff = new SQLScriptList();
+                            db.ToSqlDiff(sqlDiff, this._selectedSchemas);
+                            writer.Write(sqlDiff.ToSQL());
                             writer.Close();
                         }
                     }

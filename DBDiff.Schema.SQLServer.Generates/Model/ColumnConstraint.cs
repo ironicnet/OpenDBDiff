@@ -84,29 +84,24 @@ namespace DBDiff.Schema.SQLServer.Generates.Model
             return true;
         }
 
-        public override SQLScript Create()
+        public override void Create(SQLScriptList list, int deep = 0)
         {
             Enums.ScripActionType action = Enums.ScripActionType.AddConstraint;
-            if (!GetWasInsertInDiffList(action))
+            if (!GetWasInsertInDiffList(list, action))
             {
-                SetWasInsertInDiffList(action);
-                return new SQLScript(this.ToSqlAdd(), 0, action);
+                SetWasInsertInDiffList(list, action);
+                list.Add(new SQLScript(this.ToSqlAdd(), 0, action), deep);
             }
-            else
-                return null;
-
         }
 
-        public override SQLScript Drop()
+        public override void Drop(SQLScriptList list, int deep = 0)
         {
             Enums.ScripActionType action = Enums.ScripActionType.DropConstraint;
-            if (!GetWasInsertInDiffList(action))
+            if (!GetWasInsertInDiffList(list, action))
             {
-                SetWasInsertInDiffList(action);
-                return new SQLScript(this.ToSqlDrop(), 0, action);
+                SetWasInsertInDiffList(list, action);
+                list.Add(new SQLScript(this.ToSqlDrop(), 0, action), deep);
             }
-            else
-                return null;
         }
 
         public Boolean CanCreate
@@ -152,20 +147,18 @@ namespace DBDiff.Schema.SQLServer.Generates.Model
             return "ALTER TABLE " + ((Table)Parent.Parent).FullName + " DROP CONSTRAINT [" + Name + "]\r\nGO\r\n";
         }
 
-        public override SQLScriptList ToSqlDiff(System.Collections.Generic.ICollection<DBDiff.Schema.Model.ISchemaBase> schemas)
+        public override void ToSqlDiff(SQLScriptList listDiff, System.Collections.Generic.ICollection<DBDiff.Schema.Model.ISchemaBase> schemas)
         {
-            SQLScriptList list = new SQLScriptList();
             if (this.HasState(Enums.ObjectStatusType.DropStatus))
-                list.Add(Drop());
+                Drop(listDiff);
             if (this.HasState(Enums.ObjectStatusType.CreateStatus))
-                list.Add(Create());
+                Create(listDiff);
 
             if (this.Status == Enums.ObjectStatusType.AlterStatus)
             {
-                list.Add(Drop());
-                list.Add(Create());
+                Drop(listDiff);
+                Create(listDiff);
             }
-            return list;
         }
     }
 }

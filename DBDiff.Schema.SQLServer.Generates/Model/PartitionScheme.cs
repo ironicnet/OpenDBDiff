@@ -37,10 +37,8 @@ namespace DBDiff.Schema.SQLServer.Generates.Model
             return ToSqlAdd();
         }
 
-        public override SQLScriptList ToSqlDiff(System.Collections.Generic.ICollection<ISchemaBase> schemas)
+        public override void ToSqlDiff(SQLScriptList listDiff, System.Collections.Generic.ICollection<ISchemaBase> schemas)
         {
-            SQLScriptList listDiff = new SQLScriptList();
-
             if (this.Status == Enums.ObjectStatusType.DropStatus)
             {
                 listDiff.Add(ToSqlDrop(), 0, Enums.ScripActionType.DropPartitionScheme);
@@ -54,7 +52,6 @@ namespace DBDiff.Schema.SQLServer.Generates.Model
             {
                 listDiff.Add(ToSqlAdd(), 0, Enums.ScripActionType.AddPartitionScheme);
             }
-            return listDiff;
         }
 
         public static Boolean Compare(PartitionScheme origin, PartitionScheme destination)

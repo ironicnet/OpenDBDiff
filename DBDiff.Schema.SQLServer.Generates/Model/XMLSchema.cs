@@ -54,10 +54,10 @@ namespace DBDiff.Schema.SQLServer.Generates.Model
             return "DROP XML SCHEMA COLLECTION " + FullName + "\r\nGO\r\n";
         }
 
-        private SQLScriptList ToSQLChangeColumns()
+        private void ToSQLChangeColumns(SQLScriptList list)
         {
             Hashtable fields = new Hashtable();
-            SQLScriptList list = new SQLScriptList();
+            
             if ((this.Status == Enums.ObjectStatusType.AlterStatus) || (this.Status == Enums.ObjectStatusType.RebuildStatus))
             {
                 foreach (ObjectDependency dependency in this.Dependencys)
@@ -65,7 +65,7 @@ namespace DBDiff.Schema.SQLServer.Generates.Model
                     ISchemaBase itemDepens = ((Database)this.Parent).Find(dependency.Name);
                     if (dependency.IsCodeType)
                     {
-                        list.AddRange(((ICode)itemDepens).Rebuild());
+                        ((ICode)itemDepens).Rebuild(list);
                     }
                     if (dependency.Type == Enums.ObjectType.Table)
                     {
@@ -76,41 +76,39 @@ namespace DBDiff.Schema.SQLServer.Generates.Model
                             {
                                 if (column.HasToRebuildOnlyConstraint)
                                     column.Parent.Status = Enums.ObjectStatusType.RebuildDependenciesStatus;
-                                list.AddRange(column.RebuildConstraint(true));
+                                column.RebuildConstraint(list, true);
                                 list.Add("ALTER TABLE " + column.Parent.FullName + " ALTER COLUMN " + column.ToSQLRedefine(null, 0, "") + "\r\nGO\r\n", 0, Enums.ScripActionType.AlterColumn);
                                 /*Si la columna va a ser eliminada o la tabla va a ser reconstruida, no restaura la columna*/
                                 if ((column.Status != Enums.ObjectStatusType.DropStatus) && (column.Parent.Status != Enums.ObjectStatusType.RebuildStatus))
-                                    list.AddRange(column.Alter(Enums.ScripActionType.AlterColumnRestore));
+                                    column.Alter(list, Enums.ScripActionType.AlterColumnRestore);
                                 fields.Add(column.FullName, column.FullName);
                             }
                         }
                     }
                 }
             }
-            return list;
         }
 
         /// <summary>
         /// Devuelve el schema de diferencias del Schema en formato SQL.
         /// </summary>
-        public override SQLScriptList ToSqlDiff(System.Collections.Generic.ICollection<ISchemaBase> schemas)
+        public override void ToSqlDiff(SQLScriptList listDiff, System.Collections.Generic.ICollection<ISchemaBase> schemas)
         {
-            SQLScriptList list = new SQLScriptList();
+            
 
             if (this.Status == Enums.ObjectStatusType.DropStatus)
             {
-                list.Add(ToSqlDrop(), 0, Enums.ScripActionType.DropXMLSchema);
+                listDiff.Add(ToSqlDrop(), 0, Enums.ScripActionType.DropXMLSchema);
             }
             if (this.Status == Enums.ObjectStatusType.CreateStatus)
             {
-                list.Add(ToSql(), 0, Enums.ScripActionType.AddXMLSchema);
+                listDiff.Add(ToSql(), 0, Enums.ScripActionType.AddXMLSchema);
             }
             if (this.Status == Enums.ObjectStatusType.AlterStatus)
             {
-                list.AddRange(ToSQLChangeColumns());
-                list.Add(ToSqlDrop() + ToSql(), 0, Enums.ScripActionType.AddXMLSchema);
+                ToSQLChangeColumns(listDiff);
+                listDiff.Add(ToSqlDrop() + ToSql(), 0, Enums.ScripActionType.AddXMLSchema);
             }
-            return list;
         }
 
         public bool Compare(XMLSchema obj)

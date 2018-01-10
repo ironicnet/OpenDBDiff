@@ -2,6 +2,7 @@
 using DBDiff.Schema.Attributes;
 using DBDiff.Schema.Model;
 using DBDiff.Schema.SQLServer.Generates.Model.Util;
+using DBDiff.Schema;
 
 namespace DBDiff.Schema.SQLServer.Generates.Model
 {
@@ -55,7 +56,8 @@ namespace DBDiff.Schema.SQLServer.Generates.Model
                 {
                     if (item.Status != Enums.ObjectStatusType.DropStatus)
                     {
-                        item.SetWasInsertInDiffList(Enums.ScripActionType.AddIndex);
+                        // The ToSQL has no way to track if is already listed or not
+                        //item.SetWasInsertInDiffList(list, Enums.ScripActionType.AddIndex);
                         sql += item.ToSql();
                     }
                 }
@@ -64,7 +66,8 @@ namespace DBDiff.Schema.SQLServer.Generates.Model
                 {
                     if (item.Status != Enums.ObjectStatusType.DropStatus)
                     {
-                        item.SetWasInsertInDiffList(Enums.ScripActionType.AddTrigger);
+                        // The ToSQL has no way to track if is already listed or not
+                        //item.SetWasInsertInDiffList(list, Enums.ScripActionType.AddTrigger);
                         sql += item.ToSql();
                     }
                 }
@@ -87,37 +90,36 @@ namespace DBDiff.Schema.SQLServer.Generates.Model
         /// <summary>
         /// Devuelve el schema de diferencias del Schema en formato SQL.
         /// </summary>
-        public override SQLScriptList ToSqlDiff(System.Collections.Generic.ICollection<ISchemaBase> schemas)
+        public override void ToSqlDiff(SQLScriptList listDiff, System.Collections.Generic.ICollection<ISchemaBase> schemas)
         {
-            SQLScriptList list = new SQLScriptList();
+            
             if (this.Status != Enums.ObjectStatusType.OriginalStatus)
                 RootParent.ActionMessage.Add(this);
 
             if (this.HasState(Enums.ObjectStatusType.DropStatus))
-                list.Add(Drop());
+                Drop(listDiff);
             if (this.HasState(Enums.ObjectStatusType.CreateStatus))
-                list.Add(Create());
+                Create(listDiff);
 
             if (this.HasState(Enums.ObjectStatusType.AlterStatus))
             {
                 if (this.HasState(Enums.ObjectStatusType.RebuildDependenciesStatus))
-                    list.AddRange(RebuildDependencys());
+                    RebuildDependencys(listDiff);
                 if (this.HasState(Enums.ObjectStatusType.RebuildStatus))
                 {
-                    list.Add(Drop());
-                    list.Add(Create());
+                    Drop(listDiff);
+                    Create(listDiff);
                 }
                 if (this.HasState(Enums.ObjectStatusType.AlterBodyStatus))
                 {
                     int iCount = DependenciesCount;
-                    list.Add(ToSQLAlter(), iCount, Enums.ScripActionType.AlterView);
+                    listDiff.Add(ToSQLAlter(), iCount, Enums.ScripActionType.AlterView);
                 }
-                if (!this.GetWasInsertInDiffList(Enums.ScripActionType.DropFunction) && (!this.GetWasInsertInDiffList(Enums.ScripActionType.AddFunction)))
-                    list.AddRange(Indexes.ToSqlDiff());
+                if (!this.GetWasInsertInDiffList(listDiff, Enums.ScripActionType.DropFunction) && (!this.GetWasInsertInDiffList(listDiff, Enums.ScripActionType.AddFunction)))
+                    Indexes.ToSqlDiff(listDiff);
 
-                list.AddRange(Triggers.ToSqlDiff());
+                Triggers.ToSqlDiff(listDiff);
             }
-            return list;
         }
     }
 }

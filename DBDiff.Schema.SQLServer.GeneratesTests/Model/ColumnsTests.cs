@@ -83,7 +83,8 @@ namespace DBDiff.Schema.SQLServer.Generates.Model.Tests
             originTable.OriginalTable = (Table)originTable.Clone((Database)originTable.Parent);
             new CompareColumns().GenerateDifferences<Table>(originTable.Columns, destinationTable.Columns);
 
-            SQLScriptList sqlList = originTable.ToSqlDiff(new List<ISchemaBase>());
+            SQLScriptList sqlList = new SQLScriptList();
+            originTable.ToSqlDiff(sqlList, new List<ISchemaBase>());
             string sql = sqlList.ToSQL();
             Assert.AreEqual(originColumn2.ToSqlDrop(), sql);
         }
@@ -156,7 +157,8 @@ namespace DBDiff.Schema.SQLServer.Generates.Model.Tests
             originTable.OriginalTable = (Table)originTable.Clone((Database)originTable.Parent);
             new CompareColumns().GenerateDifferences<Table>(originTable.Columns, destinationTable.Columns);
 
-            SQLScriptList sqlList = originTable.ToSqlDiff(new List<ISchemaBase>() { originColumn3 });
+            SQLScriptList sqlList = new SQLScriptList();
+            originTable.ToSqlDiff(sqlList, new List<ISchemaBase>() { originColumn3 });
             string sql = sqlList.ToSQL();
             Assert.AreEqual("", sql);
         }
@@ -229,7 +231,8 @@ namespace DBDiff.Schema.SQLServer.Generates.Model.Tests
             originTable.OriginalTable = (Table)originTable.Clone((Database)originTable.Parent);
             new CompareColumns().GenerateDifferences<Table>(originTable.Columns, destinationTable.Columns);
 
-            SQLScriptList sqlList = originTable.ToSqlDiff(new List<ISchemaBase>() { originColumn2 });
+            SQLScriptList sqlList = new SQLScriptList();
+            originTable.ToSqlDiff(sqlList, new List<ISchemaBase>() { originColumn2 });
             string sql = sqlList.ToSQL();
             Assert.AreEqual(originColumn2.ToSqlDrop(), sql);
         }

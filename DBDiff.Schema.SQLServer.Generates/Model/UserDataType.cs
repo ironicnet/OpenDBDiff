@@ -158,7 +158,7 @@ namespace DBDiff.Schema.SQLServer.Generates.Model
                               {
                                   ISchemaBase realItem = ((Database)table.Parent).Find(item.FullName);
                                   if (realItem.IsCodeType)
-                                      list.AddRange(((ICode)realItem).Rebuild());
+                                      ((ICode)realItem).Rebuild(list);
                               });
             return list;
         }
@@ -177,7 +177,7 @@ namespace DBDiff.Schema.SQLServer.Generates.Model
                     if (dependency.IsCodeType)
                     {
                         if (itemDepens != null)
-                            list.AddRange(((ICode)itemDepens).Rebuild());
+                            ((ICode)itemDepens).Rebuild(list);
                     }
                     /*Si la dependencia es una tabla, reconstruye los indices, constraint y columnas asociadas*/
                     if (dependency.Type == Enums.ObjectType.Table)
@@ -192,10 +192,10 @@ namespace DBDiff.Schema.SQLServer.Generates.Model
                                 listDependencys.AddRange(RebuildDependencys((Table)itemDepens));
                                 if (column.HasToRebuildOnlyConstraint)
                                     //column.Parent.Status = Enums.ObjectStatusType.AlterRebuildDependenciesStatus;
-                                    list.AddRange(column.RebuildDependencies());
+                                    column.RebuildDependencies(list);
                                 if (!column.IsComputed)
                                 {
-                                    list.AddRange(column.RebuildConstraint(true));
+                                    column.RebuildConstraint(list, true);
                                     list.Add(
                                         "ALTER TABLE " + column.Parent.FullName + " ALTER COLUMN " +
                                         column.ToSQLRedefine(Type, Size, null) + "\r\nGO\r\n", 0,
@@ -203,15 +203,15 @@ namespace DBDiff.Schema.SQLServer.Generates.Model
                                     /*Si la columna va a ser eliminada o la tabla va a ser reconstruida, no restaura la columna*/
                                     if ((column.Status != Enums.ObjectStatusType.DropStatus) &&
                                         (column.Parent.Status != Enums.ObjectStatusType.RebuildStatus))
-                                        list.AddRange(column.Alter(Enums.ScripActionType.AlterColumnRestore));
+                                        column.Alter(list, Enums.ScripActionType.AlterColumnRestore);
                                 }
                                 else
                                 {
                                     if (column.Status != Enums.ObjectStatusType.CreateStatus)
                                     {
-                                        if (!column.GetWasInsertInDiffList(Enums.ScripActionType.AlterColumnFormula))
+                                        if (!column.GetWasInsertInDiffList(list, Enums.ScripActionType.AlterColumnFormula))
                                         {
-                                            column.SetWasInsertInDiffList(Enums.ScripActionType.AlterColumnFormula);
+                                            column.SetWasInsertInDiffList(list, Enums.ScripActionType.AlterColumnFormula);
                                             list.Add(column.ToSqlDrop(), 0, Enums.ScripActionType.AlterColumnFormula);
                                             List<ISchemaBase> drops =
                                                 ((Database)column.Parent.Parent).Dependencies.Find(column.Parent.Id,
@@ -219,9 +219,9 @@ namespace DBDiff.Schema.SQLServer.Generates.Model
                                             drops.ForEach(item =>
                                                               {
                                                                   if (item.Status != Enums.ObjectStatusType.CreateStatus)
-                                                                      list.Add(item.Drop());
+                                                                      item.Drop(list);
                                                                   if (item.Status != Enums.ObjectStatusType.DropStatus)
-                                                                      list.Add(item.Create());
+                                                                      item.Create(list);
                                                               });
                                             /*Si la columna va a ser eliminada o la tabla va a ser reconstruida, no restaura la columna*/
                                             if ((column.Status != Enums.ObjectStatusType.DropStatus) &&
@@ -267,73 +267,61 @@ namespace DBDiff.Schema.SQLServer.Generates.Model
             return other.ToSqlDrop();
         }
 
-        public override SQLScript Create()
+        public override void Create(SQLScriptList list, int deep =0)
         {
             Enums.ScripActionType action = Enums.ScripActionType.AddUserDataType;
-            if (!GetWasInsertInDiffList(action))
+            if (!GetWasInsertInDiffList(list, action))
             {
-                SetWasInsertInDiffList(action);
-                return new SQLScript(ToSqlAdd(), 0, action);
+                SetWasInsertInDiffList(list, action);
+                list.Add(new SQLScript(ToSqlAdd(), 0, action), deep);
             }
-            else
-                return null;
         }
 
-        public override SQLScript Drop()
+        public override void Drop(SQLScriptList list, int deep =0)
         {
             const Enums.ScripActionType action = Enums.ScripActionType.DropUserDataType;
-            if (!GetWasInsertInDiffList(action))
+            if (!GetWasInsertInDiffList(list, action))
             {
-                SetWasInsertInDiffList(action);
-                return new SQLScript(ToSqlDrop(), 0, action);
+                SetWasInsertInDiffList(list, action);
+                list.Add(new SQLScript(ToSqlDrop(), 0, action), deep);
             }
-            return null;
         }
 
-        public override SQLScriptList ToSqlDiff(System.Collections.Generic.ICollection<ISchemaBase> schemas)
+        public override void ToSqlDiff(SQLScriptList listDiff, System.Collections.Generic.ICollection<ISchemaBase> schemas)
         {
-            try
+            if (Status == Enums.ObjectStatusType.DropStatus)
             {
-                var list = new SQLScriptList();
-                if (Status == Enums.ObjectStatusType.DropStatus)
-                {
-                    if (!HasAnotherUDTClass())
-                        list.Add(Drop());
-                }
-                if (HasState(Enums.ObjectStatusType.CreateStatus))
-                {
-                    list.Add(Create());
-                }
-                if (Status == Enums.ObjectStatusType.AlterStatus)
-                {
-                    if (Default.Status == Enums.ObjectStatusType.CreateStatus)
-                        list.Add(Default.ToSQLAddBind(), 0, Enums.ScripActionType.AddUserDataType);
-                    if (Default.Status == Enums.ObjectStatusType.DropStatus)
-                        list.Add(Default.ToSQLAddUnBind(), 0, Enums.ScripActionType.UnbindRuleType);
-                    if (Rule.Status == Enums.ObjectStatusType.CreateStatus)
-                        list.Add(Rule.ToSQLAddBind(), 0, Enums.ScripActionType.AddUserDataType);
-                    if (Rule.Status == Enums.ObjectStatusType.DropStatus)
-                        list.Add(Rule.ToSQLAddUnBind(), 0, Enums.ScripActionType.UnbindRuleType);
-                }
-                if (Status == Enums.ObjectStatusType.RebuildStatus)
-                {
-                    list.AddRange(ToSQLChangeColumns());
-                    if (!GetWasInsertInDiffList(Enums.ScripActionType.DropUserDataType))
-                    {
-                        list.Add(ToSqlDrop() + ToSql(), 0, Enums.ScripActionType.AddUserDataType);
-                    }
-                    else
-                        list.Add(Create());
-                }
-                if (HasState(Enums.ObjectStatusType.DropOlderStatus))
-                {
-                    list.Add(SQLDropOlder(), 0, Enums.ScripActionType.AddUserDataType);
-                }
-                return list;
+                if (!HasAnotherUDTClass())
+                    Drop(listDiff);
             }
-            catch (Exception ex)
+            if (HasState(Enums.ObjectStatusType.CreateStatus))
             {
-                return null;
+                Create(listDiff);
+            }
+            if (Status == Enums.ObjectStatusType.AlterStatus)
+            {
+                if (Default.Status == Enums.ObjectStatusType.CreateStatus)
+                    listDiff.Add(Default.ToSQLAddBind(), 0, Enums.ScripActionType.AddUserDataType);
+                if (Default.Status == Enums.ObjectStatusType.DropStatus)
+                    listDiff.Add(Default.ToSQLAddUnBind(), 0, Enums.ScripActionType.UnbindRuleType);
+                if (Rule.Status == Enums.ObjectStatusType.CreateStatus)
+                    listDiff.Add(Rule.ToSQLAddBind(), 0, Enums.ScripActionType.AddUserDataType);
+                if (Rule.Status == Enums.ObjectStatusType.DropStatus)
+                    listDiff.Add(Rule.ToSQLAddUnBind(), 0, Enums.ScripActionType.UnbindRuleType);
+            }
+            if (Status == Enums.ObjectStatusType.RebuildStatus)
+            {
+                listDiff.AddRange(ToSQLChangeColumns());
+                if (!GetWasInsertInDiffList(listDiff, Enums.ScripActionType.DropUserDataType))
+                {
+                    listDiff.Add(ToSqlDrop() + ToSql(), 0, Enums.ScripActionType.AddUserDataType);
+                }
+                else
+                    Create(listDiff);
+            }
+            if (HasState(Enums.ObjectStatusType.DropOlderStatus))
+            {
+                listDiff.Add(SQLDropOlder(), 0, Enums.ScripActionType.AddUserDataType);
             }
         }
 

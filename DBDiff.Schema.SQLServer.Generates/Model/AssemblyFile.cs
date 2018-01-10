@@ -48,10 +48,8 @@ namespace DBDiff.Schema.SQLServer.Generates.Model
             return sql + "GO\r\n";
         }
 
-        public override SQLScriptList ToSqlDiff(System.Collections.Generic.ICollection<ISchemaBase> schemas)
+        public override void ToSqlDiff(SQLScriptList listDiff, System.Collections.Generic.ICollection<ISchemaBase> schemas)
         {
-            SQLScriptList listDiff = new SQLScriptList();
-
             if (this.Status == Enums.ObjectStatusType.DropStatus)
                 listDiff.Add(ToSqlDrop(), 0, Enums.ScripActionType.DropAssemblyFile);
             if (this.Status == Enums.ObjectStatusType.CreateStatus)
@@ -61,7 +59,6 @@ namespace DBDiff.Schema.SQLServer.Generates.Model
                 listDiff.Add(ToSqlDrop(), 0, Enums.ScripActionType.DropAssemblyFile);
                 listDiff.Add(ToSqlAdd(), 0, Enums.ScripActionType.AddAssemblyFile);
             }
-            return listDiff;
         }
     }
 }

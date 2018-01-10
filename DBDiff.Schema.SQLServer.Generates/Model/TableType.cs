@@ -43,52 +43,39 @@ namespace DBDiff.Schema.SQLServer.Generates.Model
             return ToSql();
         }
 
-        public override SQLScript Create()
+        public override void Create(SQLScriptList list, int deep =0)
         {
             Enums.ScripActionType action = Enums.ScripActionType.AddTableType;
-            if (!GetWasInsertInDiffList(action))
+            if (!GetWasInsertInDiffList(list, action))
             {
-                SetWasInsertInDiffList(action);
-                return new SQLScript(this.ToSqlAdd(), 0, action);
+                SetWasInsertInDiffList(list, action);
+                list.Add(new SQLScript(this.ToSqlAdd(), 0, action), deep);
             }
-            else
-                return null;
         }
 
-        public override SQLScript Drop()
+        public override void Drop(SQLScriptList list, int deep =0)
         {
             Enums.ScripActionType action = Enums.ScripActionType.DropTableType;
-            if (!GetWasInsertInDiffList(action))
+            if (!GetWasInsertInDiffList(list, action))
             {
-                SetWasInsertInDiffList(action);
-                return new SQLScript(this.ToSqlDrop(), 0, action);
+                SetWasInsertInDiffList(list, action);
+                list.Add(new SQLScript(this.ToSqlDrop(), 0, action), deep);
             }
-            else
-                return null;
         }
 
-        public override SQLScriptList ToSqlDiff(System.Collections.Generic.ICollection<ISchemaBase> schemas)
+        public override void ToSqlDiff(SQLScriptList listDiff, System.Collections.Generic.ICollection<ISchemaBase> schemas)
         {
-            try
+            if (this.Status == Enums.ObjectStatusType.DropStatus)
             {
-                SQLScriptList list = new SQLScriptList();
-                if (this.Status == Enums.ObjectStatusType.DropStatus)
-                {
-                    list.Add(Drop());
-                }
-                if (this.HasState(Enums.ObjectStatusType.CreateStatus))
-                {
-                    list.Add(Create());
-                }
-                if (this.Status == Enums.ObjectStatusType.AlterStatus)
-                {
-                    list.Add(ToSqlDrop() + ToSql(), 0, Enums.ScripActionType.AddTableType);
-                }
-                return list;
+                Drop(listDiff);
             }
-            catch (Exception ex)
+            if (this.HasState(Enums.ObjectStatusType.CreateStatus))
             {
-                return null;
+                Create(listDiff);
+            }
+            if (this.Status == Enums.ObjectStatusType.AlterStatus)
+            {
+                listDiff.Add(ToSqlDrop() + ToSql(), 0, Enums.ScripActionType.AddTableType);
             }
         }
     }

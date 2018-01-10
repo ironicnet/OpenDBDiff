@@ -89,18 +89,14 @@ namespace DBDiff.Schema.SQLServer.Generates.Model
             return sql + "ALTER DATABASE [" + Parent.Name + "] REMOVE FILEGROUP [" + Name + "]\r\nGO\r\n\r\n";
         }
 
-        public override SQLScriptList ToSqlDiff(System.Collections.Generic.ICollection<ISchemaBase> schemas)
+        public override void ToSqlDiff(SQLScriptList listDiff, System.Collections.Generic.ICollection<ISchemaBase> schemas)
         {
-            SQLScriptList listDiff = new SQLScriptList();
-
             if (this.Status == Enums.ObjectStatusType.DropStatus)
                 listDiff.Add(this.ToSqlDrop(), 1, Enums.ScripActionType.DropFileGroup);
             if (this.Status == Enums.ObjectStatusType.CreateStatus)
                 listDiff.Add(this.ToSqlAdd(), 1, Enums.ScripActionType.AddFileGroup);
             if (this.Status == Enums.ObjectStatusType.AlterStatus)
                 listDiff.Add(this.ToSQLAlter(), 1, Enums.ScripActionType.AlterFileGroup);
-
-            return listDiff;
         }
     }
 }

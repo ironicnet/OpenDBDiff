@@ -71,23 +71,20 @@ namespace DBDiff.Schema.SQLServer.Generates.Model
         /// <summary>
         /// Devuelve el schema de diferencias del Schema en formato SQL.
         /// </summary>
-        public override SQLScriptList ToSqlDiff(System.Collections.Generic.ICollection<ISchemaBase> schemas)
+        public override void ToSqlDiff(SQLScriptList listDiff, System.Collections.Generic.ICollection<ISchemaBase> schemas)
         {
-            SQLScriptList listDiff = new SQLScriptList();
-
             if (this.Status == Enums.ObjectStatusType.DropStatus)
             {
                 listDiff.AddRange(ToSQLUnBindAll());
-                listDiff.Add(Drop());
+                Drop(listDiff);
             }
             if (this.Status == Enums.ObjectStatusType.CreateStatus)
-                listDiff.Add(Create());
+                Create(listDiff);
             if (this.Status == Enums.ObjectStatusType.AlterStatus)
             {
                 listDiff.AddRange(ToSQLUnBindAll());
-                listDiff.AddRange(Rebuild());
+                RebuildDependencys(listDiff);
             }
-            return listDiff;
         }
     }
 }

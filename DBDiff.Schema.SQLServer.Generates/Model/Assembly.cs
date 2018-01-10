@@ -82,27 +82,24 @@ namespace DBDiff.Schema.SQLServer.Generates.Model
             return "ALTER AUTHORIZATION ON ASSEMBLY::" + FullName + " TO " + Owner + "\r\nGO\r\n";
         }
 
-        public override SQLScriptList ToSqlDiff(System.Collections.Generic.ICollection<ISchemaBase> schemas)
+        public override void ToSqlDiff(SQLScriptList listDiff, System.Collections.Generic.ICollection<ISchemaBase> schemas)
         {
-            SQLScriptList list = new SQLScriptList();
-
             if (this.Status == Enums.ObjectStatusType.DropStatus)
             {
-                list.AddRange(RebuildDependencys());
-                list.Add(Drop());
+                RebuildDependencys(listDiff);
+                Drop(listDiff);
             }
             if (this.Status == Enums.ObjectStatusType.CreateStatus)
-                list.Add(Create());
+                Create(listDiff);
             if (this.HasState(Enums.ObjectStatusType.RebuildStatus))
-                list.AddRange(Rebuild());
+                Rebuild(listDiff);
             if (this.HasState(Enums.ObjectStatusType.ChangeOwner))
-                list.Add(ToSQLAlterOwner(), 0, Enums.ScripActionType.AlterAssembly);
+                listDiff.Add(ToSQLAlterOwner(), 0, Enums.ScripActionType.AlterAssembly);
             if (this.HasState(Enums.ObjectStatusType.PermissionSet))
-                list.Add(ToSQLAlter(), 0, Enums.ScripActionType.AlterAssembly);
+                listDiff.Add(ToSQLAlter(), 0, Enums.ScripActionType.AlterAssembly);
             if (this.HasState(Enums.ObjectStatusType.AlterStatus))
-                list.AddRange(Files.ToSqlDiff());
-            list.AddRange(this.ExtendedProperties.ToSqlDiff());
-            return list;
+                Files.ToSqlDiff(listDiff);
+            this.ExtendedProperties.ToSqlDiff(listDiff);
         }
 
         public bool Compare(Assembly obj)

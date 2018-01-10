@@ -49,28 +49,24 @@ namespace DBDiff.Schema.SQLServer.Generates.Model
 
         public List<FullTextIndexColumn> Columns { get; set; }
 
-        public override SQLScript Create()
+        public override void Create(SQLScriptList list, int deep =0)
         {
             Enums.ScripActionType action = Enums.ScripActionType.AddFullTextIndex;
-            if (!GetWasInsertInDiffList(action))
+            if (!GetWasInsertInDiffList(list, action))
             {
-                SetWasInsertInDiffList(action);
-                return new SQLScript(this.ToSqlAdd(), Parent.DependenciesCount, action);
+                SetWasInsertInDiffList(list, action);
+                list.Add(new SQLScript(this.ToSqlAdd(), Parent.DependenciesCount, action), deep);
             }
-            else
-                return null;
         }
 
-        public override SQLScript Drop()
+        public override void Drop(SQLScriptList list, int deep =0)
         {
             Enums.ScripActionType action = Enums.ScripActionType.DropFullTextIndex;
-            if (!GetWasInsertInDiffList(action))
+            if (!GetWasInsertInDiffList(list, action))
             {
-                SetWasInsertInDiffList(action);
-                return new SQLScript(this.ToSqlDrop(), Parent.DependenciesCount, action);
+                SetWasInsertInDiffList(list, action);
+                list.Add(new SQLScript(this.ToSqlDrop(), Parent.DependenciesCount, action), deep);
             }
-            else
-                return null;
         }
 
         public override string ToSqlAdd()
@@ -114,32 +110,30 @@ namespace DBDiff.Schema.SQLServer.Generates.Model
             return ToSqlAdd();
         }
 
-        public override SQLScriptList ToSqlDiff(System.Collections.Generic.ICollection<ISchemaBase> schemas)
+        public override void ToSqlDiff(SQLScriptList listDiff, System.Collections.Generic.ICollection<ISchemaBase> schemas)
         {
-            SQLScriptList list = new SQLScriptList();
             if (this.Status != Enums.ObjectStatusType.OriginalStatus)
                 RootParent.ActionMessage[Parent.FullName].Add(this);
 
             if (this.HasState(Enums.ObjectStatusType.DropStatus))
-                list.Add(Drop());
+                Drop(listDiff);
             if (this.HasState(Enums.ObjectStatusType.CreateStatus))
-                list.Add(Create());
+                Create(listDiff);
             if (this.HasState(Enums.ObjectStatusType.AlterStatus))
             {
-                list.Add(Drop());
-                list.Add(Create());
+                Drop(listDiff);
+                Create(listDiff);
             }
             if (this.Status == Enums.ObjectStatusType.DisabledStatus)
             {
-                list.Add(this.ToSqlEnabled(), Parent.DependenciesCount, Enums.ScripActionType.AlterFullTextIndex);
+                listDiff.Add(this.ToSqlEnabled(), Parent.DependenciesCount, Enums.ScripActionType.AlterFullTextIndex);
             }
             /*if (this.Status == StatusEnum.ObjectStatusType.ChangeFileGroup)
             {
                 listDiff.Add(this.ToSQLDrop(this.FileGroup), ((Table)Parent).DependenciesCount, StatusEnum.ScripActionType.DropIndex);
                 listDiff.Add(this.ToSQLAdd(), ((Table)Parent).DependenciesCount, StatusEnum.ScripActionType.AddIndex);
             }*/
-            list.AddRange(this.ExtendedProperties.ToSqlDiff());
-            return list;
+            this.ExtendedProperties.ToSqlDiff(listDiff);
         }
 
         public Boolean Compare(FullTextIndex destination)

@@ -45,36 +45,34 @@ namespace DBDiff.Schema.SQLServer.Generates.Model
             return FormatCode.FormatAlter("FUNCTION", ToSql(), this, quitSchemaBinding);
         }
 
-        public override SQLScriptList ToSqlDiff(System.Collections.Generic.ICollection<ISchemaBase> schemas)
+        public override void ToSqlDiff(SQLScriptList listDiff, System.Collections.Generic.ICollection<ISchemaBase> schemas)
         {
-            SQLScriptList list = new SQLScriptList();
             if (this.Status != Enums.ObjectStatusType.OriginalStatus)
                 RootParent.ActionMessage.Add(this);
 
             if (this.HasState(Enums.ObjectStatusType.DropStatus))
-                list.Add(Drop());
+                Drop(listDiff);
             if (this.HasState(Enums.ObjectStatusType.CreateStatus))
-                list.Add(Create());
+                Create(listDiff);
             if (this.HasState(Enums.ObjectStatusType.AlterStatus))
             {
                 if (this.HasState(Enums.ObjectStatusType.RebuildDependenciesStatus))
-                    list.AddRange(RebuildDependencys());
+                    RebuildDependencys(listDiff);
 
-                if (!this.GetWasInsertInDiffList(Enums.ScripActionType.DropFunction))
+                if (!this.GetWasInsertInDiffList(listDiff, Enums.ScripActionType.DropFunction))
                 {
                     if (this.HasState(Enums.ObjectStatusType.RebuildStatus))
                     {
-                        list.Add(Drop());
-                        list.Add(Create());
+                        Drop(listDiff);
+                        Create(listDiff);
                     }
                     if (this.HasState(Enums.ObjectStatusType.AlterBodyStatus))
                     {
                         int iCount = DependenciesCount;
-                        list.Add(ToSQLAlter(), iCount, Enums.ScripActionType.AlterFunction);
+                        listDiff.Add(ToSQLAlter(), iCount, Enums.ScripActionType.AlterFunction);
                     }
                 }
             }
-            return list;
         }
     }
 }

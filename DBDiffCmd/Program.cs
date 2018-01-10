@@ -67,14 +67,25 @@ namespace DBDiff.OCDB
                     destination = sql.Process();
                     Console.WriteLine("Comparing databases schemas...");
                     origin = Generate.Compare(origin, destination);
+                    Schema.SQLScriptList sqlDiff = new Schema.SQLScriptList();
                     if (!arguments.OutputAll)
                     {
                         // temporary work-around: run twice just like GUI
-                        origin.ToSqlDiff(new System.Collections.Generic.List<Schema.Model.ISchemaBase>());
+                        origin.ToSqlDiff(sqlDiff,new System.Collections.Generic.List<Schema.Model.ISchemaBase>());
                     }
 
                     Console.WriteLine("Generating SQL file...");
-                    SaveFile(arguments.OutputFile, arguments.OutputAll ? origin.ToSql() : origin.ToSqlDiff(new System.Collections.Generic.List<Schema.Model.ISchemaBase>()).ToSQL());
+                    string script = null;
+                    if (arguments.OutputAll)
+                    {
+                        script = origin.ToSql();
+                    }
+                    else
+                    {
+                        origin.ToSqlDiff(sqlDiff, new System.Collections.Generic.List<Schema.Model.ISchemaBase>());
+                        script = sqlDiff.ToSQL();
+                    }
+                    SaveFile(arguments.OutputFile, script);
                     completedSuccessfully = true;
                 }
             }

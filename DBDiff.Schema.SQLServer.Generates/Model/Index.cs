@@ -236,26 +236,24 @@ namespace DBDiff.Schema.SQLServer.Generates.Model
             return sql;
         }
 
-        public override SQLScript Create()
+        public override void Create(SQLScriptList list, int deep =0)
         {
             Enums.ScripActionType action = Enums.ScripActionType.AddIndex;
-            if (!GetWasInsertInDiffList(action))
+            if (!GetWasInsertInDiffList(list, action))
             {
-                SetWasInsertInDiffList(action);
-                return new SQLScript(ToSqlAdd(), Parent.DependenciesCount, action);
+                SetWasInsertInDiffList(list, action);
+                list.Add(new SQLScript(ToSqlAdd(), Parent.DependenciesCount, action));
             }
-            return null;
         }
 
-        public override SQLScript Drop()
+        public override void Drop(SQLScriptList list, int deep =0)
         {
             Enums.ScripActionType action = Enums.ScripActionType.DropIndex;
-            if (!GetWasInsertInDiffList(action))
+            if (!GetWasInsertInDiffList(list, action))
             {
-                SetWasInsertInDiffList(action);
-                return new SQLScript(ToSqlDrop(), Parent.DependenciesCount, action);
+                SetWasInsertInDiffList(list, action);
+                list.Add( new SQLScript(ToSqlDrop(), Parent.DependenciesCount, action));
             }
-            return null;
         }
 
         private string ToSqlEnabled()
@@ -265,9 +263,8 @@ namespace DBDiff.Schema.SQLServer.Generates.Model
             return "ALTER INDEX [" + Name + "] ON " + Parent.FullName + " REBUILD\r\nGO\r\n";
         }
 
-        public override SQLScriptList ToSqlDiff(System.Collections.Generic.ICollection<ISchemaBase> schemas)
+        public override void ToSqlDiff(SQLScriptList listDiff, System.Collections.Generic.ICollection<ISchemaBase> schemas)
         {
-            SQLScriptList list = new SQLScriptList();
             if (Status != Enums.ObjectStatusType.OriginalStatus)
             {
                 var actionMessage = RootParent.ActionMessage[Parent.FullName];
@@ -276,25 +273,24 @@ namespace DBDiff.Schema.SQLServer.Generates.Model
             }
 
             if (HasState(Enums.ObjectStatusType.DropStatus))
-                list.Add(Drop());
+                Drop(listDiff);
             if (HasState(Enums.ObjectStatusType.CreateStatus))
-                list.Add(Create());
+                Create(listDiff);
             if (HasState(Enums.ObjectStatusType.AlterStatus))
             {
-                list.Add(Drop());
-                list.Add(Create());
+                Drop(listDiff);
+                Create(listDiff);
             }
             if (Status == Enums.ObjectStatusType.DisabledStatus)
             {
-                list.Add(ToSqlEnabled(), Parent.DependenciesCount, Enums.ScripActionType.AlterIndex);
+                listDiff.Add(ToSqlEnabled(), Parent.DependenciesCount, Enums.ScripActionType.AlterIndex);
             }
             /*if (this.Status == StatusEnum.ObjectStatusType.ChangeFileGroup)
             {
                 listDiff.Add(this.ToSQLDrop(this.FileGroup), ((Table)Parent).DependenciesCount, StatusEnum.ScripActionType.DropIndex);
                 listDiff.Add(this.ToSQLAdd(), ((Table)Parent).DependenciesCount, StatusEnum.ScripActionType.AddIndex);
             }*/
-            list.AddRange(ExtendedProperties.ToSqlDiff());
-            return list;
+            ExtendedProperties.ToSqlDiff(listDiff);
         }
     }
 }

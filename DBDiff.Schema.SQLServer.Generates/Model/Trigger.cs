@@ -69,18 +69,17 @@ namespace DBDiff.Schema.SQLServer.Generates.Model
             }
         }
 
-        public override SQLScriptList ToSqlDiff(System.Collections.Generic.ICollection<ISchemaBase> schemas)
+        public override void ToSqlDiff(SQLScriptList listDiff, System.Collections.Generic.ICollection<ISchemaBase> schemas)
         {
-            SQLScriptList list = new SQLScriptList();
+            
             if (this.Status == Enums.ObjectStatusType.DropStatus)
-                list.Add(Drop());
+                Drop(listDiff);
             if (this.Status == Enums.ObjectStatusType.CreateStatus)
-                list.Add(Create());
+                Create(listDiff);
             if (this.HasState(Enums.ObjectStatusType.AlterStatus))
-                list.AddRange(Rebuild());
+                RebuildDependencys(listDiff);
             if (this.HasState(Enums.ObjectStatusType.DisabledStatus))
-                list.Add(this.ToSQLEnabledDisabled(), 0, Enums.ScripActionType.EnabledTrigger);
-            return list;
+                listDiff.Add(this.ToSQLEnabledDisabled(), 0, Enums.ScripActionType.EnabledTrigger);
         }
 
         public override bool Compare(ICode obj)
